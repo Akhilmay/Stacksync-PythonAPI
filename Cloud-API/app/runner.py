@@ -58,8 +58,7 @@ def run():
         stdout_content = stdout_buffer.getvalue()
 
         error_msg = f"{e.__class__.__name__}: {e}"
-        # Optional: include traceback in error details if desired
-        # tb = traceback.format_exc()
+        
 
         payload = {
             "ok": False,
@@ -125,7 +124,6 @@ def main_entry(user_script_path):
         tb = traceback.format_exc()
         # write traceback to stderr and result marker
         sys.stderr.write("RESULT_JSON:" + json.dumps({"result": None, "error": "exception_in_main", "traceback": tb}) + "\n")
-        # still print captured stdout (if any) to stdout so host can deliver it
         sys.stdout.write(buf.getvalue())
         sys.exit(1)
 

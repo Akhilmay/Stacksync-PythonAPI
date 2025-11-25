@@ -9,7 +9,7 @@ from flask import Flask, request, jsonify
 app = Flask(__name__)
 
 NSJAIL_CMD = os.environ.get("NSJAIL_CMD", "/usr/bin/nsjail")
-PYTHON_BIN = os.environ.get("PYTHON_BIN", "python3")
+PYTHON_BIN = os.environ.get("PYTHON_BIN", "/usr/local/bin/python3")
 RUNNER_PATH = os.environ.get("RUNNER_PATH", "/app/runner.py")
 
 @app.route("/health", methods=["GET"])
@@ -38,42 +38,29 @@ def run_code():
     except Exception as e:
         return jsonify({"ok": False, "error": f"Failed to write temp script: {e}", "stdout": ""}), 500
 
-    # nsjail command on VM/GKE – here you can safely use more features
+    # nsjail command on VM/GKE 
     cmd = [
-        NSJAIL_CMD,
-        "-Mo",
-        "--quiet",
+    NSJAIL_CMD,
+    "-Mo",
+    "--quiet",
+    "--time_limit", "5",
+    "--max_cpus", "1",
+    "--rlimit_as", "512",
+    "--rlimit_stack", "64",
+    "--rlimit_nproc", "32",
 
-        # Example isolation settings (tune as needed)
-        "--time_limit", "5",
-        "--max_cpus", "1",
-        "--rlimit_as", "512",       # MB
-        "--rlimit_stack", "64",     # MB
-        "--rlimit_nproc", "32",
+    "--user", "65534",
+    "--group", "65534",
+    "--keep_env",
 
-        # New namespaces (these *do* work on a normal VM/GKE node)
-        "--clone_newuser",
-        "--clone_newpid",
-        "--clone_newuts",
-        "--clone_newipc",
-        "--clone_newnet",
-        "--clone_newns",
-
-        # Map to nobody user inside the jail
-        "--user", "65534",
-        "--group", "65534",
-
-        # (Optional) chroot – for true FS isolation you’d point this at a
-        # prepared minimal rootfs with python + runner available inside.
-        # Example placeholder:
-        # "--chroot", "/sandbox_root",
-
-        # We pass script_path as argument to runner.py
-        "--",
-        PYTHON_BIN,
-        RUNNER_PATH,
-        script_path,
+    "--",
+    PYTHON_BIN,          
+    RUNNER_PATH,
+    script_path,
     ]
+
+    print("NSJAIL CMD:", cmd, flush=True)
+
 
     try:
         result = subprocess.run(
@@ -92,11 +79,11 @@ def run_code():
     stdout = (result.stdout or "").strip()
     stderr = (result.stderr or "").strip()
 
-    # runner.py should print JSON; try to parse it
+
     try:
         payload = json.loads(stdout)
     except Exception:
-        # If runner.py crashed before printing JSON, surface stderr
+        # If runner.py crashed before printing JSON, we return stderr
         return jsonify({
             "ok": False,
             "error": "Runner did not return valid JSON",
@@ -104,6 +91,4 @@ def run_code():
             "stderr": stderr,
         }), 500
 
-    # Just forward runner.py's payload as-is to Cloud Run
-    # It already has: ok, result, stdout, (and maybe error)
     return jsonify(payload), 200

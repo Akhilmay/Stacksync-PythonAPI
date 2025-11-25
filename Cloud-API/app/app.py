@@ -9,7 +9,7 @@ import requests
 
 app = Flask(__name__)
 
-WORKER_URL = os.environ.get("WORKER_URL", "http://sandbox-worker/run")
+WORKER_URL = os.environ.get("WORKER_URL", "http://34.63.44.131:8080/run")
 NSJAIL_CMD = os.environ.get("NSJAIL_CMD", "/usr/bin/nsjail")
 PYTHON_BIN = os.environ.get("PYTHON_BIN", sys.executable)
 RUNNER_PATH = os.environ.get("RUNNER_PATH", "/app/runner.py")
@@ -37,14 +37,13 @@ def run_code():
     }
 
     try:
-        # Call the worker (VM/GKE) that actually runs nsjail + runner.py
+        # Calling the worker (VM/GKE) that actually runs nsjail + runner.py
         resp = requests.post(
             WORKER_URL,
             json=payload,
             timeout=15
         )
     except requests.exceptions.RequestException as e:
-        # Network/connection error talking to the worker
         return jsonify({
             "error": "Failed to reach execution worker",
             "details": str(e),
