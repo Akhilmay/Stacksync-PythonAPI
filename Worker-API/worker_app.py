@@ -3,13 +3,14 @@ import os
 import json
 import uuid
 import subprocess
+import sys
 import tempfile
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
 NSJAIL_CMD = os.environ.get("NSJAIL_CMD", "/usr/bin/nsjail")
-PYTHON_BIN = os.environ.get("PYTHON_BIN", "/usr/local/bin/python3")
+PYTHON_BIN = os.environ.get("PYTHON_BIN", sys.executable)
 RUNNER_PATH = os.environ.get("RUNNER_PATH", "/app/runner.py")
 
 @app.route("/health", methods=["GET"])
@@ -43,6 +44,10 @@ def run_code():
     NSJAIL_CMD,
     "-Mo",
     "--quiet",
+    
+    "--disable_clone_newns",
+    "--chroot", "/",
+
     "--time_limit", "5",
     "--max_cpus", "1",
     "--rlimit_as", "512",

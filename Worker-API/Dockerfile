@@ -16,12 +16,13 @@ RUN git clone https://github.com/google/nsjail.git /opt/nsjail && \
     cp nsjail /usr/bin/nsjail && \
     rm -rf /opt/nsjail
 
-RUN ln -s /usr/local/bin/python3 /usr/bin/python3
-
 WORKDIR /app
 
-# Python deps for the worker
-RUN pip install --no-cache-dir flask gunicorn
+# Copy dependency file first to leverage Docker caching
+COPY requirements.txt .
+
+# Install Python packages
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy code
 COPY worker_app.py /app/worker_app.py
